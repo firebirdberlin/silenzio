@@ -22,16 +22,7 @@ public class IncomingCallReceiver extends BroadcastReceiver {
         Log.i(TAG, "Phone state changed to " + state);
 
         if (TelephonyManager.EXTRA_STATE_RINGING.equals(state)) {
-
-            Intent i =  new Intent(context, SetRingerService.class);
-            i.putExtra("PHONE_STATE", state);
-            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(i);
-            } else {
-                context.startService(i);
-            }
-
+            SetRingerService.start(context);
         } else { // OFFHOOK or IDLE
 
         }

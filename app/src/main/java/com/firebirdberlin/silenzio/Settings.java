@@ -17,9 +17,9 @@ class Settings {
     }
 
     private void reload() {
-        FlipAction = settings.getBoolean("FlipAction", false);
-        PullOutAction = settings.getBoolean("PullOutAction", false);
-        ShakeAction = settings.getBoolean("ShakeAction", false);
+        FlipAction = settings.getBoolean("FlipAction", true);
+        PullOutAction = settings.getBoolean("PullOutAction", true);
+        ShakeAction = settings.getBoolean("ShakeAction", true);
         enabled = settings.getBoolean("enabled", true);
     }
 }

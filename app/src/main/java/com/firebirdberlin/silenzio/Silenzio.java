@@ -30,6 +30,11 @@ public class Silenzio extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (SetRingerService.running) {
+                    SetRingerService.stop(getApplicationContext());
+                } else {
+                    SetRingerService.start(getApplicationContext());
+                }
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }

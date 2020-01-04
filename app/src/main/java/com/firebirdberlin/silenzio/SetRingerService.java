@@ -10,21 +10,13 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
-
-import com.firebirdberlin.silenzio.Settings;
-import com.firebirdberlin.silenzio.Silenzio;
-import com.firebirdberlin.silenzio.Utility;
-import com.firebirdberlin.silenzio.mAudioManager;
 
 import java.util.List;
 
@@ -35,7 +27,7 @@ public class SetRingerService extends Service implements SensorEventListener {
     private static int DISPLAY_FACE_UP = 1;
     private static int DISPLAY_FACE_DOWN = 2;
     private static int SENSOR_DELAY = 50000; // us = 50 ms
-    private static float MAX_POCKET_BRIGHTNESS = 10.f; // proximity sensor fix
+    private static float MAX_POCKET_BRIGHTNESS = 10.f;
     PowerManager.WakeLock wakelock;
     private Settings settings = null;
     private mAudioManager audiomanager = null;
@@ -43,10 +35,26 @@ public class SetRingerService extends Service implements SensorEventListener {
     private Sensor accelerometerSensor = null;
     private Sensor proximitySensor = null;
     private Sensor lightSensor = null;
-    private boolean running = false;
+    public static boolean running = false;
     private boolean DeviceIsCovered = false;
     private float ambientLight = 0;//SensorManager.LIGHT_SUNLIGHT_MAX;
     private int isOnTable = NOT_ON_TABLE;
+    private Float firstProximityValue = null;
+
+    public static void start(Context context) {
+        Intent i =  new Intent(context, SetRingerService.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(i);
+        } else {
+            context.startService(i);
+        }
+    }
+
+    public static void stop(Context context) {
+        Intent i =  new Intent(context, SetRingerService.class);
+        context.stopService(i);
+    }
 
     private final BroadcastReceiver phoneStateReceiver = new BroadcastReceiver() {
         @Override
@@ -61,52 +69,6 @@ public class SetRingerService extends Service implements SensorEventListener {
     private boolean DeviceUnCovered = false;
     private int shake_left = 0;
     private int shake_right = 0;
-    /**
-     * The listener that listens to events connected to incoming calls
-     */
-    private final SensorEventListener inCallActions =
-            new SensorEventListener() {
-                public void onAccuracyChanged(Sensor sensor, int accuracy) {
-                }
-
-                public void onSensorChanged(SensorEvent event) {
-                    if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                        float x_value = event.values[0];
-                        float z_value = event.values[2];
-                        // if acceleration in x and y direction is too strong, device is moving
-                        if (settings.ShakeAction) {
-                            if (x_value < -12.) shake_left++;
-                            if (x_value > 12.) shake_right++;
-
-                            // shake to silence
-                            if ((shake_left >= 1 && shake_right >= 2) ||
-                                    (shake_left >= 2 && shake_right >= 1)) {
-                                audiomanager.mute();
-                                shake_left = shake_right = 0;
-                            }
-                        }
-
-                        if (settings.FlipAction) {
-                            if (z_value > -10.3 && z_value < -9.3) { // display face down
-                                audiomanager.mute();
-                            }
-                        }
-
-                    } else if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
-                        DeviceUnCovered = (event.values[0] > 0.f);
-
-                    } else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
-                        if ((settings.PullOutAction) && isCovered()) {
-                            // Attention do not choose the value to low,
-                            // noise produces values up to 12 lux on my GNex
-                            if (event.values[0] >= 15.f) { // uncovered
-                                audiomanager.mute();
-                            }
-                        }
-                    }
-                }
-            };
-
     @Override
     public void onCreate() {
         callStartForeground();
@@ -163,16 +125,17 @@ public class SetRingerService extends Service implements SensorEventListener {
 
         unregisterReceiver(phoneStateReceiver);
         sensorManager.unregisterListener(this);
-        sensorManager.unregisterListener(inCallActions);
 
         if (wakelock != null && wakelock.isHeld()) {
             wakelock.release();
         }
         audiomanager.unmute();
+        running = false;
     }
 
 
     private void registerListenerForSensor(Sensor sensor) {
+        Log.i(TAG, "registerListener: " + sensor.getName());
         if (sensor != null) {
             sensorManager.registerListener(this, sensor, SENSOR_DELAY, SENSOR_DELAY / 2);
         }
@@ -208,12 +171,6 @@ public class SetRingerService extends Service implements SensorEventListener {
         //&& ambientLight < MAX_POCKET_BRIGHTNESS));
     }
 
-    private void registerInCallSensorListeners() {
-        sensorManager.registerListener(inCallActions, proximitySensor, SENSOR_DELAY);
-        sensorManager.registerListener(inCallActions, accelerometerSensor, SENSOR_DELAY);
-        sensorManager.registerListener(inCallActions, lightSensor, SENSOR_DELAY);
-    }
-
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
@@ -225,24 +182,27 @@ public class SetRingerService extends Service implements SensorEventListener {
         // The Proximity sensor returns a single value either 0 or 5 (also 1 depends on Sensor manufacturer).
         // 0 for near and 5 for far
         if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
-            DeviceIsCovered = (event.values[0] == 0);
-        } else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
-            ambientLight += event.values[0]; // simply log the value
-        } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            isOnTable = NOT_ON_TABLE;
-            // if acceleration in x and y direction is too strong, device is moving
-            if (Math.abs(event.values[0]) > 1.) return;
-            if (Math.abs(event.values[1]) > 1.) return;
-
-            float z_value = event.values[2];
-            // acceleration in z direction must be g
-            if (z_value > -10.3 && z_value < -9.3) {
-                isOnTable = DISPLAY_FACE_DOWN;
-            } else if (z_value > 9.3 && z_value < 10.3) {
-                isOnTable = DISPLAY_FACE_UP;
-            } else {
-                isOnTable = NOT_ON_TABLE;
+            if (firstProximityValue == null) {
+                firstProximityValue = event.values[0];
+                DeviceIsCovered = (event.values[0] == 0);
+                Log.i(TAG, "Device is covered");
+            } else if (DeviceIsCovered) {
+                DeviceUnCovered = (event.values[0] > 0.f);
             }
+
+        } else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
+            ambientLight = event.values[0]; // simply log the value
+            if ((settings.PullOutAction) && isCovered()) {
+                // Attention do not choose the value to low,
+                // noise produces values up to 12 lux on my GNex
+                if (event.values[0] >= 15.f) { // uncovered
+                    Log.i(TAG, "device is uncovered");
+                    audiomanager.mute();
+                    DeviceIsCovered = false;
+                }
+            }
+        } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            handleAccelerometerActions(event);
         }
     }
 
@@ -251,7 +211,7 @@ public class SetRingerService extends Service implements SensorEventListener {
         Log.d(TAG, "onStartCommand() ( running = " + running + " )");
         callStartForeground();
         // no action needed
-        if (audiomanager.isSilent() || audiomanager.isVibration() || (settings.enabled == false)) {
+        if (audiomanager.isSilent() || audiomanager.isVibration() || (!settings.enabled)) {
             stopSelf();
             return Service.START_NOT_STICKY;
         }
@@ -272,9 +232,32 @@ public class SetRingerService extends Service implements SensorEventListener {
         registerListenerForSensor(proximitySensor);
         registerListenerForSensor(lightSensor);
         registerListenerForSensor(accelerometerSensor);
-
         audiomanager.mute();
 
         return Service.START_NOT_STICKY;
+    }
+
+    private void handleAccelerometerActions(SensorEvent event) {
+
+        float x_value = event.values[0];
+        float z_value = event.values[2];
+        // if acceleration in x and y direction is too strong, device is moving
+        if (settings.ShakeAction) {
+            if (x_value < -12.) shake_left++;
+            if (x_value > 12.) shake_right++;
+            // shake to silence
+            if ((shake_left >= 1 && shake_right >= 2) ||
+                    (shake_left >= 2 && shake_right >= 1)) {
+                audiomanager.mute();
+                shake_left = shake_right = 0;
+                Log.i(TAG, "shake detected");
+            }
+        }
+
+        if (settings.FlipAction) {
+            if (z_value > -10.3 && z_value < -9.3) { // display face down
+                audiomanager.mute();
+            }
+        }
     }
 }
