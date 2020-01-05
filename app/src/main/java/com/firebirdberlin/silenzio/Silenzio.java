@@ -122,7 +122,7 @@ public class Silenzio extends AppCompatActivity {
             return;
         }
 
-        if (!hasNotificationAccessPermission()) {
+        if (Build.VERSION.SDK_INT >= 23 && !hasNotificationAccessPermission()) {
             Snackbar.make(parentLayout, "Please allow to enable Do not disturb", Snackbar.LENGTH_INDEFINITE)
                     .setAction(
                             android.R.string.ok,
