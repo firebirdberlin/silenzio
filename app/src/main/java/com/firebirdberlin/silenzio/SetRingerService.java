@@ -39,7 +39,7 @@ public class SetRingerService extends Service implements SensorEventListener {
     private boolean DeviceIsCovered = false;
     private float ambientLight = 0;//SensorManager.LIGHT_SUNLIGHT_MAX;
     private int isOnTable = NOT_ON_TABLE;
-    private Float firstProximityValue = null;
+    private float firstProximityValue = -1.f;
 
     public static void start(Context context) {
         Intent i =  new Intent(context, SetRingerService.class);
@@ -182,12 +182,18 @@ public class SetRingerService extends Service implements SensorEventListener {
         // The Proximity sensor returns a single value either 0 or 5 (also 1 depends on Sensor manufacturer).
         // 0 for near and 5 for far
         if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
-            if (firstProximityValue == null) {
+            Log.i(TAG, String.valueOf(event.values[0]));
+            boolean isCovered = (event.values[0] == 0.0f);
+            if (firstProximityValue < 0.f && isCovered) {
                 firstProximityValue = event.values[0];
-                DeviceIsCovered = (event.values[0] == 0);
+                DeviceIsCovered = true;
                 Log.i(TAG, "Device is covered");
-            } else if (DeviceIsCovered) {
-                DeviceUnCovered = (event.values[0] > 0.f);
+                return;
+            }
+
+            if (DeviceIsCovered) {
+                DeviceUnCovered = (event.values[0] > 0.01f);
+                Log.i(TAG, "Device is uncovered");
             }
 
         } else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
@@ -232,7 +238,6 @@ public class SetRingerService extends Service implements SensorEventListener {
         registerListenerForSensor(proximitySensor);
         registerListenerForSensor(lightSensor);
         registerListenerForSensor(accelerometerSensor);
-        audiomanager.mute();
 
         return Service.START_NOT_STICKY;
     }

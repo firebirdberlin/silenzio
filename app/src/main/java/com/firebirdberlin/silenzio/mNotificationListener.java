@@ -6,9 +6,11 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Handler;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+
 
 
 public class mNotificationListener extends NotificationListenerService
@@ -28,6 +30,14 @@ implements SensorEventListener {
     private boolean accelerometerRead = false;
     private boolean magnetometerRead = false;
 
+    Handler handler = new Handler();
+    Runnable checkOrientation = new Runnable() {
+        @Override
+        public void run() {
+            handler.removeCallbacks(checkOrientation);
+            registerReceiver();
+        }
+    };
     @Override
     public void onCreate() {
         super.onCreate();
@@ -39,6 +49,7 @@ implements SensorEventListener {
 
     @Override
     public void onDestroy() {
+        handler.removeCallbacks(checkOrientation);
         super.onDestroy();
     }
 
@@ -141,13 +152,19 @@ implements SensorEventListener {
         );
     }
 
+    private boolean wasSetToSilent = false;
     private void manageDnd() {
         if (accelerometerReading[2] < -9.) {
             if (!audioManager.isSilent()) {
                 audioManager.setRingerModeSilent();
+                wasSetToSilent = true;
             }
         } else {
+            wasSetToSilent = false;
             audioManager.restoreRingerMode();
+        }
+        if (wasSetToSilent) {
+            handler.postDelayed(checkOrientation, 120000);
         }
     }
 }

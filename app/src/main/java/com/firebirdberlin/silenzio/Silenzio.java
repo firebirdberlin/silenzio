@@ -1,5 +1,11 @@
 package com.firebirdberlin.silenzio;
 
+import android.Manifest;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -61,5 +67,45 @@ public class Silenzio extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void requestPermissions() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
+        if (!(hasPermission(Manifest.permission.READ_PHONE_STATE))) {
+            requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, 0);
+        }
+    }
+
+    private boolean hasPermission(String permission) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void setupNotificationAccessPermission() {
+        if (!hasNotificationAccessPermission()) {
+
+            Intent intent =
+                    new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+
+            startActivity(intent);
+        }
+    }
+
+    private boolean hasNotificationAccessPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return true;
+        }
+
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null)  {
+             return notificationManager.isNotificationPolicyAccessGranted();
+        }
+
+        return false;
     }
 }
