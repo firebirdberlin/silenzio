@@ -14,6 +14,7 @@ import com.google.android.material.snackbar.Snackbar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.os.Handler;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -69,13 +70,75 @@ public class Silenzio extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void requestPermissions() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                checkForPermissions();
+            }
+        }, 2000);
+    }
+
+    protected void checkForPermissions() {
+        View parentLayout = findViewById(android.R.id.content);
+        if (! hasPermission(Manifest.permission.READ_PHONE_STATE)) {
+
+            Snackbar.make(parentLayout, "Please grant permissions", Snackbar.LENGTH_INDEFINITE)
+                    .setAction(
+                            android.R.string.ok,
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                                        return;
+                                    }
+                                    requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, 0);
+                                }
+                            }
+                    ).show();
             return;
         }
-        if (!(hasPermission(Manifest.permission.READ_PHONE_STATE))) {
-            requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, 0);
+
+        if (!mNotificationListener.isRunning) {
+            Snackbar.make(parentLayout, "Please enable notification access", Snackbar.LENGTH_INDEFINITE)
+                    .setAction(
+                            android.R.string.ok,
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    Intent intent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                                    startActivity(intent);
+                                }
+                            }
+                    ).show();
+            return;
         }
+
+        if (!hasNotificationAccessPermission()) {
+            Snackbar.make(parentLayout, "Please allow to enable Do not disturb", Snackbar.LENGTH_INDEFINITE)
+                    .setAction(
+                            android.R.string.ok,
+                            new View.OnClickListener() {
+                                @Override
+                                    public void onClick(View view) {
+                                    Intent intent =
+                                            new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+
+                                    startActivity(intent);
+                                }
+                            }
+                    ).show();
+            return;
+        }
+
     }
 
     private boolean hasPermission(String permission) {
@@ -83,16 +146,6 @@ public class Silenzio extends AppCompatActivity {
             return true;
         }
         return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void setupNotificationAccessPermission() {
-        if (!hasNotificationAccessPermission()) {
-
-            Intent intent =
-                    new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
-
-            startActivity(intent);
-        }
     }
 
     private boolean hasNotificationAccessPermission() {
