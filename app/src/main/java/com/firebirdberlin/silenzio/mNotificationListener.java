@@ -23,12 +23,6 @@ implements SensorEventListener {
 
     private SensorManager sensorManager;
     private final float[] accelerometerReading = new float[3];
-    private final float[] magnetometerReading = new float[3];
-
-    private final float[] rotationMatrix = new float[9];
-    private final float[] orientationAngles = new float[3];
-    private boolean accelerometerRead = false;
-    private boolean magnetometerRead = false;
 
     Handler handler = new Handler();
     Runnable checkOrientation = new Runnable() {
@@ -67,16 +61,9 @@ implements SensorEventListener {
     }
 
     private void registerReceiver() {
-        accelerometerRead = false;
-        magnetometerRead = false;
         Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer,
-                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_NORMAL);
-        }
-        Sensor magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        if (magneticField != null) {
-            sensorManager.registerListener(this, magneticField,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_NORMAL);
         }
     }
@@ -89,15 +76,23 @@ implements SensorEventListener {
     public void onNotificationPosted(StatusBarNotification sbn) {
 
         Log.i(TAG, "onNotificationPosted");
-        if (!settings.getBoolean("enabled", true)) return;
+        if (!isEnabled()) return;
 
         registerReceiver();
     }
 
+    boolean isEnabled() {
+        return (
+                settings.getBoolean("enabled", true)
+                && settings.getBoolean("FlipActionNotification", true)
+        );
+    }
+
+
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         super.onNotificationRemoved(sbn);
-        if (!settings.getBoolean("enabled", true)) return;
+        if (!isEnabled()) return;
 
         registerReceiver();
     }
@@ -116,40 +111,9 @@ implements SensorEventListener {
             System.arraycopy(
                     event.values, 0, accelerometerReading, 0, accelerometerReading.length
             );
-            accelerometerRead = true;
-        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            System.arraycopy(
-                    event.values, 0, magnetometerReading, 0, magnetometerReading.length
-            );
-            magnetometerRead = true;
-        }
-        if (accelerometerRead && magnetometerRead) {
             unregisterReceiver();
-            updateOrientationAngles();
             manageDnd();
         }
-    }
-
-    // Compute the three orientation angles based on the most recent readings from
-    // the device's accelerometer and magnetometer.
-    public void updateOrientationAngles() {
-        // Update rotation matrix, which is needed to update orientation angles.
-        SensorManager.getRotationMatrix(
-                rotationMatrix, null, accelerometerReading, magnetometerReading
-        );
-
-        // "mRotationMatrix" now has up-to-date information.
-
-        SensorManager.getOrientation(rotationMatrix, orientationAngles);
-        Log.d(
-                TAG,
-                String.format(
-                        "%3.2f %3.2f %3.2f",
-                        accelerometerReading[0],
-                        accelerometerReading[1],
-                        accelerometerReading[2]
-                )
-        );
     }
 
     private boolean wasSetToSilent = false;
@@ -160,9 +124,12 @@ implements SensorEventListener {
                 wasSetToSilent = true;
             }
         } else {
-            wasSetToSilent = false;
-            audioManager.restoreRingerMode();
+            if (wasSetToSilent) {
+                wasSetToSilent = false;
+                audioManager.restoreRingerMode();
+            }
         }
+
         if (wasSetToSilent) {
             handler.postDelayed(checkOrientation, 120000);
         }

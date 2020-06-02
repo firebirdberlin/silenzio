@@ -26,6 +26,11 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".PreferencesActivity"
+            android:parentActivityName=".Silenzio">
+
+        </activity>
+
         <service android:enabled="true" android:name=".SetRingerService" />
         <service android:name=".mNotificationListener"
             android:label="Silenzio"

@@ -218,6 +218,8 @@ public class SetRingerService extends Service implements SensorEventListener {
         callStartForeground();
         // no action needed
         if (audiomanager.isSilent() || audiomanager.isVibration() || (!settings.enabled)) {
+            Log.d(TAG, "no action needed");
+
             stopSelf();
             return Service.START_NOT_STICKY;
         }

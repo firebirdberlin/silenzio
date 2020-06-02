@@ -3,8 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.firebirdberlin.silenzio.Silenzio">
     <item
+        android:id="@+id/action_enabled"
+        app:actionViewClass="androidx.appcompat.widget.SwitchCompat"
+        app:showAsAction="always"
+        android:title=""/>
+    <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="@string/action_settings"
-        app:showAsAction="never" />
+        android:icon="@drawable/ic_settings"
+        app:showAsAction="ifRoom" />
 </menu>

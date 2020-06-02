@@ -12,12 +12,14 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 
 import android.os.Handler;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.CompoundButton;
 
 public class Silenzio extends AppCompatActivity {
     public static String TAG = "Silenzio";
@@ -52,6 +54,16 @@ public class Silenzio extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        MenuItem btn = menu.findItem(R.id.action_enabled);
+        final SwitchCompat switchEnabled = (SwitchCompat) btn.getActionView();
+
+        switchEnabled.setChecked(Settings.getEnabled(this));
+        switchEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Settings.setEnabled(getApplicationContext(), isChecked);
+            }
+        });
         return true;
     }
 
@@ -64,6 +76,7 @@ public class Silenzio extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            PreferencesActivity.start(this);
             return true;
         }
 

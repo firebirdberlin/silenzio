@@ -1,0 +1,33 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="Mute incoming calls when ..."
+        android:singleLineTitle="true">
+        <SwitchPreferenceCompat
+            app:key="FlipAction"
+            app:title="@string/prefFlipAction"
+            app:iconSpaceReserved="false"
+            app:defaultValue="true"/>
+        <SwitchPreferenceCompat
+            app:key="ShakeAction"
+            app:iconSpaceReserved="false"
+            app:title="@string/prefShakeAction"
+            app:defaultValue="true"/>
+        <SwitchPreferenceCompat
+            app:key="PulloutAction"
+            app:iconSpaceReserved="false"
+            app:title="@string/prefPulloutAction"
+            app:defaultValue="true"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="Mute notifications when ..."
+        android:singleLineTitle="true">
+        <SwitchPreferenceCompat
+            app:key="FlipActionNotfication"
+            app:title="@string/prefFlipAction"
+            app:iconSpaceReserved="false"
+            app:defaultValue="true"/>
+    </PreferenceCategory>
+</PreferenceScreen>

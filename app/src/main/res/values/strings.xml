@@ -3,4 +3,9 @@
     <string name="action_settings">Settings</string>
     <string name="notificationChannelNameRingerService">background service</string>
     <string name="notificationChannelDescRingerService">Service reading sensor data while incoming calls.</string>
+    <string name="preferences">Preferences</string>
+    <string name="prefFlipAction">the device is flipped</string>
+    <string name="prefPulloutAction">the brightness changes</string>
+    <string name="prefShakeAction">the device is shaken</string>
+    <string name="introduction">Silenzio helps to mute your device on incoming calls or notifications. Simply flip it around to mute the sounds.</string>
 </resources>
